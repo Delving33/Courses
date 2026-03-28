@@ -210,7 +210,7 @@
   <div class="tab-content" id="tab-list">
     <h2 class="section-title">🛒 Liste de Courses</h2>
     <div id="groceryListContent"></div>
-    <button class="btn-primary btn-danger" id="clearListBtn" onclick="clearGroceryList()" style="display:none;">🗑️ Vider la liste</button>
+    <button class="btn-primary btn-danger" id="clearListBtn" onclick="clearCheckedItems()" style="display:none;">🗑️ Supprimer les articles cochés</button>
   </div>
 
   <!-- TAB: AJOUTS LIBRES -->
@@ -468,7 +468,7 @@ function renderGroceryList() {
     document.getElementById('summaryBar').classList.remove('visible');
     return;
   }
-  clearBtn.style.display='block';
+  clearBtn.style.display=groceryItems.some(g=>g.checked)?'block':'none';
   const rayons = {};
   groceryItems.forEach(it=>{if(!rayons[it.rayon])rayons[it.rayon]=[];rayons[it.rayon].push(it);});
   el.innerHTML = RAYON_ORDER.filter(r=>rayons[r]).map(rayon=>`
@@ -509,11 +509,15 @@ async function removeGroceryItem(id) {
   await loadGroceryList(); renderGroceryList();
 }
 
-async function clearGroceryList() {
-  if (!confirm('Vider toute la liste de courses ?')) return;
-  await sb.from('grocery_list').delete().neq('id','00000000-0000-0000-0000-000000000000');
+async function clearCheckedItems() {
+  const checked = groceryItems.filter(g=>g.checked);
+  if (!checked.length) return;
+  if (!confirm('Supprimer les '+checked.length+' article'+(checked.length>1?'s':'')+' coché'+(checked.length>1?'s':'')+' ?')) return;
+  for (const item of checked) {
+    await sb.from('grocery_list').delete().eq('id',item.id);
+  }
   await loadGroceryList(); renderGroceryList();
-  toast('Liste vidée');
+  toast(checked.length+' article'+(checked.length>1?'s':'')+' supprimé'+(checked.length>1?'s':''));
 }
 
 function updateSummary() {
