@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notre Liste de Courses</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.39.3/supabase.min.js"></script>
+<style>
+  :root {
+    --bg: #FAF7F2;
+    --card: #FFFFFF;
+    --accent: #D4763C;
+    --accent-light: #F5E6DA;
+    --accent-dark: #B8612E;
+    --text: #2C2417;
+    --text-soft: #7A6F63;
+    --border: #E8E0D6;
+    --green: #5A8F5C;
+    --green-light: #E4F0E4;
+    --green-dark: #3D6B3F;
+    --red: #C75B5B;
+    --red-light: #F5E0E0;
+    --blue: #5B8EC7;
+    --blue-light: #E0EBF5;
+    --rayon-legumes: #6BA368;
+    --rayon-viande: #C75B5B;
+    --rayon-epicerie: #C9953C;
+    --rayon-frais: #5B8EC7;
+    --rayon-autre: #8B7AB8;
+    --shadow: 0 2px 12px rgba(44,36,23,0.06);
+    --shadow-hover: 0 6px 24px rgba(44,36,23,0.1);
+    --radius: 14px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; line-height:1.5; }
+
+  /* Header */
+  .header { text-align:center; padding:40px 24px 28px; position:relative; }
+  .header::after { content:''; position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:60px; height:3px; background:var(--accent); border-radius:2px; }
+  .header h1 { font-family:'DM Serif Display',serif; font-size:2.2rem; color:var(--text); margin-bottom:6px; letter-spacing:-0.5px; }
+  .header p { color:var(--text-soft); font-size:1rem; }
+  .sync-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ccc; margin-left:8px; vertical-align:middle; transition:background 0.3s; }
+  .sync-dot.connected { background:var(--green); }
+
+  .container { max-width:900px; margin:0 auto; padding:28px 20px 100px; }
+
+  .section-title { font-family:'DM Serif Display',serif; font-size:1.4rem; margin-bottom:18px; display:flex; align-items:center; gap:10px; }
+
+  /* Tabs */
+  .tabs { display:flex; gap:3px; background:var(--card); border:2px solid var(--border); border-radius:12px; padding:3px; margin-bottom:28px; overflow-x:auto; }
+  .tab { flex:1; padding:11px 8px; border:none; background:transparent; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:600; color:var(--text-soft); cursor:pointer; border-radius:9px; transition:all 0.25s; white-space:nowrap; min-width:0; }
+  .tab:hover { color:var(--text); }
+  .tab.active { background:var(--accent); color:white; box-shadow:0 2px 8px rgba(212,118,60,0.3); }
+  .tab-content { display:none; }
+  .tab-content.active { display:block; animation:fadeUp 0.3s ease; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Cards */
+  .meals-grid { display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:36px; }
+  .meal-card { background:var(--card); border:2px solid var(--border); border-radius:var(--radius); padding:18px 22px; cursor:pointer; transition:all 0.25s; position:relative; overflow:hidden; user-select:none; }
+  .meal-card::before { content:''; position:absolute; left:0;top:0;bottom:0; width:4px; background:var(--border); transition:background 0.25s; }
+  .meal-card:hover { border-color:var(--accent-light); box-shadow:var(--shadow-hover); transform:translateY(-1px); }
+  .meal-card.selected { border-color:var(--accent); background:linear-gradient(135deg,#FFFCF9,#FFF8F2); }
+  .meal-card.selected::before { background:var(--accent); }
+  .meal-top { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
+  .meal-checkbox { width:24px;height:24px; border-radius:7px; border:2px solid var(--border); display:flex;align-items:center;justify-content:center; flex-shrink:0; transition:all 0.25s; background:var(--bg); }
+  .meal-card.selected .meal-checkbox { background:var(--accent); border-color:var(--accent); }
+  .meal-checkbox svg { width:13px;height:13px; opacity:0; transform:scale(0.5); transition:all 0.2s; }
+  .meal-card.selected .meal-checkbox svg { opacity:1; transform:scale(1); }
+  .meal-name { font-weight:700; font-size:1.05rem; flex:1; }
+  .meal-emoji { font-size:1.3rem; }
+  .meal-ingredients { display:flex; flex-wrap:wrap; gap:5px; padding-left:36px; }
+  .ingredient-tag { background:var(--bg); color:var(--text-soft); font-size:0.8rem; padding:3px 9px; border-radius:18px; font-weight:500; transition:all 0.2s; }
+  .meal-card.selected .ingredient-tag { background:var(--accent-light); color:var(--accent-dark); }
+
+  /* Servings */
+  .servings-row { display:flex; align-items:center; gap:14px; margin-bottom:28px; background:var(--card); padding:14px 22px; border-radius:var(--radius); border:2px solid var(--border); }
+  .servings-label { font-weight:600; font-size:0.92rem; color:var(--text-soft); }
+  .servings-control { display:flex; align-items:center; margin-left:auto; }
+  .servings-btn { width:36px;height:36px; border:2px solid var(--border); background:var(--bg); font-size:1.1rem;font-weight:700; cursor:pointer; color:var(--text); display:flex;align-items:center;justify-content:center; transition:all 0.15s; }
+  .servings-btn:first-child { border-radius:9px 0 0 9px; }
+  .servings-btn:last-child { border-radius:0 9px 9px 0; }
+  .servings-btn:hover { background:var(--accent-light); border-color:var(--accent); color:var(--accent-dark); }
+  .servings-value { width:46px;height:36px; display:flex;align-items:center;justify-content:center; font-weight:700;font-size:1.1rem; border-top:2px solid var(--border); border-bottom:2px solid var(--border); background:white; }
+
+  /* Buttons */
+  .btn-primary { width:100%; padding:16px; background:var(--accent); color:white; border:none; border-radius:var(--radius); font-family:'DM Sans',sans-serif; font-size:1.05rem; font-weight:700; cursor:pointer; transition:all 0.25s; letter-spacing:0.3px; }
+  .btn-primary:hover { background:var(--accent-dark); transform:translateY(-2px); box-shadow:0 8px 24px rgba(212,118,60,0.3); }
+  .btn-primary:disabled { background:var(--border); cursor:not-allowed; transform:none; box-shadow:none; }
+  .btn-green { background:var(--green); }
+  .btn-green:hover { background:var(--green-dark); box-shadow:0 8px 24px rgba(90,143,92,0.3); }
+  .btn-small { width:auto; padding:10px 18px; font-size:0.9rem; }
+
+  /* Grocery List */
+  .grocery-section { margin-bottom:32px; }
+  .rayon { margin-bottom:18px; }
+  .rayon-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; padding-bottom:5px; border-bottom:2px solid var(--border); }
+  .rayon-dot { width:10px;height:10px; border-radius:50%; flex-shrink:0; }
+  .rayon-name { font-weight:700; font-size:0.9rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-soft); }
+  .grocery-item { display:flex; align-items:center; gap:11px; padding:11px 14px; background:var(--card); border-radius:10px; margin-bottom:5px; cursor:pointer; transition:all 0.2s; user-select:none; border:1.5px solid transparent; }
+  .grocery-item:hover { border-color:var(--border); }
+  .grocery-item.checked { opacity:0.4; }
+  .grocery-item.checked .grocery-name { text-decoration:line-through; }
+  .grocery-check { width:21px;height:21px; border-radius:6px; border:2px solid var(--border); flex-shrink:0; display:flex;align-items:center;justify-content:center; transition:all 0.2s; background:white; }
+  .grocery-item.checked .grocery-check { background:var(--green); border-color:var(--green); }
+  .grocery-check svg { width:11px;height:11px; opacity:0; transition:opacity 0.15s; }
+  .grocery-item.checked .grocery-check svg { opacity:1; }
+  .grocery-name { font-weight:500; font-size:0.93rem; flex:1; }
+  .grocery-qty { font-weight:700; color:var(--accent); font-size:0.88rem; white-space:nowrap; }
+  .grocery-meals { font-size:0.76rem; color:var(--text-soft); background:var(--bg); padding:2px 7px; border-radius:6px; }
+  .grocery-remove { width:26px;height:26px; border-radius:6px; border:none; background:var(--red-light); color:var(--red); font-size:1rem; cursor:pointer; display:flex;align-items:center;justify-content:center; transition:all 0.15s; flex-shrink:0; }
+  .grocery-remove:hover { background:var(--red); color:white; }
+
+  /* Form elements */
+  .form-card { background:var(--card); border:2px solid var(--border); border-radius:var(--radius); padding:24px; margin-bottom:18px; }
+  .form-row { display:flex; gap:10px; margin-bottom:14px; align-items:flex-end; }
+  .form-group { display:flex; flex-direction:column; gap:5px; flex:1; position:relative; }
+  .form-group.small { flex:0 0 95px; }
+  .form-group.tiny { flex:0 0 75px; }
+  .form-label { font-weight:600; font-size:0.8rem; color:var(--text-soft); text-transform:uppercase; letter-spacing:0.5px; }
+  .form-input,.form-select { padding:9px 12px; border:2px solid var(--border); border-radius:9px; font-family:'DM Sans',sans-serif; font-size:0.93rem; color:var(--text); background:var(--bg); transition:border-color 0.2s; width:100%; }
+  .form-input:focus,.form-select:focus { outline:none; border-color:var(--accent); background:white; }
+  .form-select { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237A6F63' d='M2 4l4 4 4-4'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
+
+  /* Autocomplete */
+  .autocomplete-list { position:absolute; top:100%; left:0; right:0; background:white; border:2px solid var(--accent); border-top:none; border-radius:0 0 9px 9px; max-height:180px; overflow-y:auto; z-index:100; box-shadow:var(--shadow-hover); }
+  .autocomplete-item { padding:9px 14px; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; gap:8px; transition:background 0.1s; }
+  .autocomplete-item:hover { background:var(--accent-light); }
+  .autocomplete-item .ac-name { font-weight:600; flex:1; }
+  .autocomplete-item .ac-detail { font-size:0.8rem; color:var(--text-soft); }
+
+  /* Emoji picker */
+  .emoji-picker { display:flex; gap:5px; flex-wrap:wrap; }
+  .emoji-option { width:38px;height:38px; border-radius:9px; border:2px solid var(--border); background:var(--bg); font-size:1.15rem; cursor:pointer; display:flex;align-items:center;justify-content:center; transition:all 0.15s; }
+  .emoji-option:hover { border-color:var(--accent); transform:scale(1.1); }
+  .emoji-option.selected { border-color:var(--accent); background:var(--accent-light); }
+
+  /* Ingredient rows */
+  .ing-list { margin-top:14px; }
+  .ing-row { display:flex; gap:7px; align-items:center; margin-bottom:7px; padding:9px 12px; background:var(--bg); border-radius:9px; animation:fadeUp 0.2s; }
+  .ing-row .ing-name { flex:1; font-weight:500; font-size:0.9rem; }
+  .ing-row .ing-detail { font-size:0.83rem; color:var(--text-soft); }
+  .ing-remove { width:26px;height:26px; border-radius:6px; border:none; background:var(--red-light); color:var(--red); font-size:1rem; cursor:pointer; display:flex;align-items:center;justify-content:center; transition:all 0.15s; flex-shrink:0; }
+  .ing-remove:hover { background:var(--red); color:white; }
+  .btn-add-ing { padding:10px 18px; border:none; border-radius:9px; font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; transition:all 0.2s; background:var(--green-light); color:var(--green-dark); width:100%; margin-top:7px; }
+  .btn-add-ing:hover { background:var(--green); color:white; }
+
+  /* Managed meal rows */
+  .managed-meal { display:flex; align-items:center; gap:12px; padding:14px 18px; background:var(--card); border:2px solid var(--border); border-radius:11px; margin-bottom:9px; transition:all 0.2s; }
+  .managed-meal:hover { border-color:var(--accent-light); }
+  .managed-meal .mm-emoji { font-size:1.3rem; }
+  .managed-meal .mm-name { font-weight:700; font-size:0.95rem; flex:1; }
+  .managed-meal .mm-count { font-size:0.83rem; color:var(--text-soft); }
+  .mm-delete { width:32px;height:32px; border-radius:8px; border:2px solid var(--red-light); background:white; color:var(--red); font-size:1rem; cursor:pointer; display:flex;align-items:center;justify-content:center; transition:all 0.15s; }
+  .mm-delete:hover { background:var(--red); color:white; border-color:var(--red); }
+
+  /* Inventory */
+  .inv-item { display:flex; align-items:center; gap:11px; padding:11px 14px; background:var(--card); border-radius:10px; margin-bottom:5px; border:1.5px solid transparent; transition:all 0.2s; }
+  .inv-item:hover { border-color:var(--border); }
+  .inv-name { font-weight:500; font-size:0.93rem; flex:1; }
+  .inv-detail { font-size:0.83rem; color:var(--text-soft); }
+  .inv-add { width:32px;height:32px; border-radius:8px; border:2px solid var(--green-light); background:white; color:var(--green); font-size:1.2rem; font-weight:700; cursor:pointer; display:flex;align-items:center;justify-content:center; transition:all 0.15s; flex-shrink:0; }
+  .inv-add:hover { background:var(--green); color:white; border-color:var(--green); }
+  .inv-add.added { background:var(--green); color:white; border-color:var(--green); pointer-events:none; }
+  .inv-remove { width:32px;height:32px; border-radius:8px; border:2px solid var(--red-light); background:white; color:var(--red); font-size:1rem; cursor:pointer; display:flex;align-items:center;justify-content:center; transition:all 0.15s; flex-shrink:0; }
+  .inv-remove:hover { background:var(--red); color:white; border-color:var(--red); }
+
+  .divider { height:2px; background:var(--border); margin:24px 0; border-radius:1px; }
+  .empty-msg { text-align:center; color:var(--text-soft); padding:28px; font-size:0.93rem; }
+  .search-bar { margin-bottom:16px; }
+  .search-bar input { width:100%; padding:11px 16px; border:2px solid var(--border); border-radius:var(--radius); font-family:'DM Sans',sans-serif; font-size:0.95rem; background:var(--card); color:var(--text); }
+  .search-bar input:focus { outline:none; border-color:var(--accent); }
+
+  .loading { text-align:center; padding:40px; color:var(--text-soft); }
+  .loading::after { content:''; display:inline-block; width:20px;height:20px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.6s linear infinite; margin-left:10px; vertical-align:middle; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  .summary-bar { display:none; position:fixed; bottom:0;left:0;right:0; background:white; border-top:2px solid var(--border); padding:12px 24px; text-align:center; font-weight:600; color:var(--text-soft); font-size:0.88rem; z-index:10; }
+  .summary-bar.visible { display:block; }
+  .summary-bar span { color:var(--green-dark); font-weight:700; }
+
+  .toast { position:fixed; bottom:70px; left:50%; transform:translateX(-50%); background:var(--text); color:white; padding:10px 22px; border-radius:10px; font-size:0.9rem; font-weight:600; z-index:200; animation:toastIn 0.3s ease, toastOut 0.3s ease 1.7s forwards; }
+  @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+  @keyframes toastOut { to{opacity:0;transform:translateX(-50%) translateY(10px)} }
+
+  @media(min-width:640px) { .meals-grid{grid-template-columns:1fr 1fr;} }
+  @media(max-width:500px) { .form-row{flex-wrap:wrap;} .form-group.small,.form-group.tiny{flex:1 1 45%;} .tab{font-size:0.78rem;padding:10px 5px;} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Notre Liste <span class="sync-dot" id="syncDot" title="Synchronisation"></span></h1>
+  <p>Planifiez, partagez, synchronisez en temps réel</p>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" data-tab="plan">🍽️ Planifier</button>
+    <button class="tab" data-tab="free">🛒 Courses libres</button>
+    <button class="tab" data-tab="inventory">📦 Inventaire</button>
+    <button class="tab" data-tab="manage">✏️ Gérer repas</button>
+  </div>
+
+  <!-- TAB: PLANIFIER -->
+  <div class="tab-content active" id="tab-plan">
+    <h2 class="section-title">🍽️ Mes Repas</h2>
+    <div class="meals-grid" id="mealsGrid"><div class="loading">Chargement</div></div>
+    <div class="servings-row">
+      <span class="servings-label">👥 Personnes</span>
+      <div class="servings-control">
+        <button class="servings-btn" onclick="changeServings(-1)">−</button>
+        <div class="servings-value" id="servingsValue">2</div>
+        <button class="servings-btn" onclick="changeServings(1)">+</button>
+      </div>
+    </div>
+    <button class="btn-primary" id="generateBtn" onclick="generateList()" disabled>Sélectionnez au moins un repas</button>
+    <div class="grocery-section" id="groceryList" style="margin-top:28px;"></div>
+  </div>
+
+  <!-- TAB: COURSES LIBRES -->
+  <div class="tab-content" id="tab-free">
+    <h2 class="section-title">🛒 Courses libres</h2>
+    <p style="color:var(--text-soft);margin-bottom:18px;font-size:0.93rem;">Ajoutez ici tout ce qui n'est pas lié à un repas (ménage, hygiène, etc.). Ces articles seront fusionnés dans la liste de courses finale.</p>
+    <div class="form-card">
+      <div class="form-row">
+        <div class="form-group" style="position:relative;">
+          <label class="form-label">Article</label>
+          <input class="form-input" id="freeNameInput" type="text" placeholder="Ex : Papier toilette" autocomplete="off">
+          <div class="autocomplete-list" id="freeAutocomplete" style="display:none;"></div>
+        </div>
+        <div class="form-group small">
+          <label class="form-label">Quantité</label>
+          <input class="form-input" id="freeQtyInput" type="number" min="0" step="any" placeholder="1" value="1">
+        </div>
+        <div class="form-group tiny">
+          <label class="form-label">Unité</label>
+          <select class="form-select" id="freeUnitInput">
+            <option value="">aucune</option>
+            <option value="g">g</option><option value="kg">kg</option>
+            <option value="ml">ml</option><option value="cl">cl</option><option value="L">L</option>
+            <option value="c.à.s">c.à.s</option><option value="c.à.c">c.à.c</option>
+            <option value="pièce(s)">pièce(s)</option><option value="tranche(s)">tranche(s)</option>
+            <option value="pincée">pincée</option>
+          </select>
+        </div>
+        <div class="form-group small">
+          <label class="form-label">Rayon</label>
+          <select class="form-select" id="freeRayonInput">
+            <option value="Fruits & Légumes">🥬 F&L</option>
+            <option value="Viandes & Poissons">🥩 Viande</option>
+            <option value="Frais">🧊 Frais</option>
+            <option value="Épicerie">🏪 Épicerie</option>
+            <option value="Autre" selected>🛒 Autre</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary btn-green btn-small" onclick="addFreeItem()" style="width:100%;">+ Ajouter</button>
+    </div>
+    <div id="freeItemsList"></div>
+  </div>
+
+  <!-- TAB: INVENTAIRE -->
+  <div class="tab-content" id="tab-inventory">
+    <h2 class="section-title">📦 Inventaire</h2>
+    <p style="color:var(--text-soft);margin-bottom:18px;font-size:0.93rem;">Tout ce que vous avez déjà acheté. Parcourez la liste et cliquez <strong>+</strong> pour ajouter ce qui manque à la liste de courses.</p>
+    <div class="search-bar">
+      <input type="text" id="invSearch" placeholder="🔍 Rechercher dans l'inventaire..." oninput="renderInventory()">
+    </div>
+    <div id="inventoryList"><div class="loading">Chargement</div></div>
+  </div>
+
+  <!-- TAB: GÉRER REPAS -->
+  <div class="tab-content" id="tab-manage">
+    <h2 class="section-title">➕ Ajouter un repas</h2>
+    <div class="form-card">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nom du repas</label>
+          <input class="form-input" id="mealNameInput" type="text" placeholder="Ex : Gratin dauphinois">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Icône</label>
+          <div class="emoji-picker" id="emojiPicker"></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <label class="form-label">Ingrédients</label>
+      <div class="ing-list" id="ingList"></div>
+      <div class="form-row" style="margin-top:12px;">
+        <div class="form-group" style="position:relative;">
+          <label class="form-label">Ingrédient</label>
+          <input class="form-input" id="ingNameInput" type="text" placeholder="Ex : Pommes de terre" autocomplete="off">
+          <div class="autocomplete-list" id="ingAutocomplete" style="display:none;"></div>
+        </div>
+        <div class="form-group small">
+          <label class="form-label">Quantité</label>
+          <input class="form-input" id="ingQtyInput" type="number" min="0" step="any" placeholder="500">
+        </div>
+        <div class="form-group tiny">
+          <label class="form-label">Unité</label>
+          <select class="form-select" id="ingUnitInput">
+            <option value="g">g</option><option value="kg">kg</option>
+            <option value="ml">ml</option><option value="cl">cl</option><option value="L">L</option>
+            <option value="c.à.s">c.à.s</option><option value="c.à.c">c.à.c</option>
+            <option value="pièce(s)">pièce(s)</option><option value="tranche(s)">tranche(s)</option>
+            <option value="pincée">pincée</option><option value="">aucune</option>
+          </select>
+        </div>
+        <div class="form-group small">
+          <label class="form-label">Rayon</label>
+          <select class="form-select" id="ingRayonInput">
+            <option value="Fruits & Légumes">🥬 F&L</option>
+            <option value="Viandes & Poissons">🥩 Viande</option>
+            <option value="Frais">🧊 Frais</option>
+            <option value="Épicerie">🏪 Épicerie</option>
+            <option value="Autre">🛒 Autre</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-add-ing" onclick="addTempIngredient()">+ Ajouter cet ingrédient</button>
+      <button class="btn-primary" id="saveMealBtn" onclick="saveMeal()" disabled style="margin-top:18px;">Enregistrer le repas</button>
+    </div>
+    <div class="divider"></div>
+    <h2 class="section-title">📋 Repas enregistrés</h2>
+    <div id="managedMealsList"></div>
+  </div>
+</div>
+
+<div class="summary-bar" id="summaryBar"><span id="summaryText"></span></div>
+
+<script>
+const CHECK_SVG = '<svg viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const EMOJIS = ["🍝","🍗","🥗","🍄","🧀","🥘","🍲","🍛","🐟","🥩","🍕","🌮","🍔","🥐","🍳","🥧","🍰","🫕","🥖","🧆"];
+const RAYON_COLORS = {"Fruits & Légumes":"var(--rayon-legumes)","Viandes & Poissons":"var(--rayon-viande)","Épicerie":"var(--rayon-epicerie)","Frais":"var(--rayon-frais)","Autre":"var(--rayon-autre)"};
+const RAYON_ICONS = {"Fruits & Légumes":"🥬","Viandes & Poissons":"🥩","Épicerie":"🏪","Frais":"🧊","Autre":"🛒"};
+const RAYON_ORDER = ["Fruits & Légumes","Viandes & Poissons","Frais","Épicerie","Autre"];
+
+// ===== SUPABASE =====
+const SUPABASE_URL = 'https://ysqqpqqxwivmeuxshxkt.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzcXFwcXF4d2l2bWV1eHNoeGt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTcxNTgsImV4cCI6MjA5MDI5MzE1OH0.MjxLa718ZnelCPYhA8779XJ8_QaITuzsTsBIY5ODq7E';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ===== STATE =====
+let meals = [];
+let inventory = [];
+let freeItems = [];
+let groceryItems = [];
+let selectedMealIds = new Set();
+let servings = 2;
+let tempIngredients = [];
+let selectedEmoji = EMOJIS[0];
+
+// ===== INIT =====
+async function init() {
+  await Promise.all([loadMeals(), loadInventory(), loadFreeItems(), loadGroceryList()]);
+  setupRealtimeSubscriptions();
+  renderMeals();
+  renderInventory();
+  renderFreeItems();
+  renderManagedMeals();
+  initEmojiPicker();
+  setupAutocomplete('ingNameInput', 'ingAutocomplete', (item) => {
+    document.getElementById('ingNameInput').value = item.name;
+    document.getElementById('ingUnitInput').value = item.unit || '';
+    document.getElementById('ingRayonInput').value = item.rayon || 'Autre';
+    document.getElementById('ingAutocomplete').style.display = 'none';
+    document.getElementById('ingQtyInput').focus();
+  });
+  setupAutocomplete('freeNameInput', 'freeAutocomplete', (item) => {
+    document.getElementById('freeNameInput').value = item.name;
+    document.getElementById('freeUnitInput').value = item.unit || '';
+    document.getElementById('freeRayonInput').value = item.rayon || 'Autre';
+    document.getElementById('freeAutocomplete').style.display = 'none';
+    document.getElementById('freeQtyInput').focus();
+  });
+  document.getElementById('syncDot').classList.add('connected');
+}
+
+// ===== DATA LOADING =====
+async function loadMeals() {
+  const { data: m } = await sb.from('meals').select('*, meal_ingredients(*)').order('created_at');
+  if (m) meals = m;
+}
+async function loadInventory() {
+  const { data } = await sb.from('inventory').select('*').order('name');
+  if (data) inventory = data;
+}
+async function loadFreeItems() {
+  const { data } = await sb.from('free_items').select('*').order('created_at');
+  if (data) freeItems = data;
+}
+async function loadGroceryList() {
+  const { data } = await sb.from('grocery_list').select('*').order('created_at');
+  if (data) groceryItems = data;
+}
+
+// ===== REALTIME =====
+function setupRealtimeSubscriptions() {
+  sb.channel('all-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'meals' }, () => { loadMeals().then(() => { renderMeals(); renderManagedMeals(); }); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'meal_ingredients' }, () => { loadMeals().then(() => { renderMeals(); renderManagedMeals(); }); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'free_items' }, () => { loadFreeItems().then(renderFreeItems); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => { loadInventory().then(renderInventory); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'grocery_list' }, () => { loadGroceryList().then(renderGroceryList); })
+    .subscribe((status) => {
+      document.getElementById('syncDot').classList.toggle('connected', status === 'SUBSCRIBED');
+    });
+}
+
+// ===== TABS =====
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab !== 'plan') document.getElementById('summaryBar').classList.remove('visible');
+  });
+});
+
+// ===== PLAN TAB =====
+function renderMeals() {
+  const grid = document.getElementById('mealsGrid');
+  if (!meals.length) { grid.innerHTML = '<div class="empty-msg">Aucun repas. Allez dans <strong>Gérer repas</strong> pour en ajouter.</div>'; return; }
+  grid.innerHTML = meals.map(m => `
+    <div class="meal-card ${selectedMealIds.has(m.id)?'selected':''}" onclick="toggleMeal('${m.id}')">
+      <div class="meal-top">
+        <div class="meal-checkbox">${CHECK_SVG}</div>
+        <span class="meal-name">${esc(m.name)}</span>
+        <span class="meal-emoji">${m.emoji}</span>
+      </div>
+      <div class="meal-ingredients">
+        ${(m.meal_ingredients||[]).map(g=>`<span class="ingredient-tag">${esc(g.name)}</span>`).join('')}
+      </div>
+    </div>`).join('');
+  updateGenBtn();
+}
+
+function toggleMeal(id) {
+  selectedMealIds.has(id) ? selectedMealIds.delete(id) : selectedMealIds.add(id);
+  renderMeals();
+}
+
+function updateGenBtn() {
+  const btn = document.getElementById('generateBtn');
+  const n = selectedMealIds.size;
+  btn.disabled = n === 0;
+  btn.textContent = n === 0 ? "Sélectionnez au moins un repas" : `Générer la liste (${n} repas)`;
+}
+
+function changeServings(d) {
+  servings = Math.max(1, Math.min(12, servings + d));
+  document.getElementById('servingsValue').textContent = servings;
+}
+
+async function generateList() {
+  // Clear existing grocery list
+  await sb.from('grocery_list').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+  const merged = {};
+
+  // Add meal ingredients
+  selectedMealIds.forEach(id => {
+    const meal = meals.find(m => m.id === id);
+    if (!meal) return;
+    (meal.meal_ingredients || []).forEach(ing => {
+      const key = ing.name + '|' + ing.unit + '|' + ing.rayon;
+      if (!merged[key]) merged[key] = { name:ing.name, unit:ing.unit, rayon:ing.rayon, qty:0, source:'repas' };
+      merged[key].qty += (ing.qty / ing.per_servings) * servings;
+    });
+  });
+
+  // Add free items (not checked)
+  freeItems.filter(f => !f.checked).forEach(f => {
+    const key = f.name + '|' + f.unit + '|' + f.rayon;
+    if (!merged[key]) merged[key] = { name:f.name, unit:f.unit, rayon:f.rayon, qty:0, source:'libre' };
+    merged[key].qty += Number(f.qty);
+  });
+
+  const rows = Object.values(merged).map(item => ({
+    name: item.name,
+    qty: Math.round(item.qty * 100) / 100,
+    unit: item.unit,
+    rayon: item.rayon,
+    source: item.source,
+    checked: false
+  }));
+
+  if (rows.length) await sb.from('grocery_list').insert(rows);
+
+  // Add to inventory
+  for (const item of rows) {
+    await sb.from('inventory').upsert({ name: item.name, unit: item.unit, rayon: item.rayon, last_used: new Date().toISOString() }, { onConflict: 'name' });
+  }
+
+  await Promise.all([loadGroceryList(), loadInventory()]);
+  renderGroceryList();
+  renderInventory();
+  toast('Liste générée !');
+}
+
+function renderGroceryList() {
+  const el = document.getElementById('groceryList');
+  if (!groceryItems.length) { el.innerHTML = ''; document.getElementById('summaryBar').classList.remove('visible'); return; }
+
+  const rayons = {};
+  groceryItems.forEach(it => { if (!rayons[it.rayon]) rayons[it.rayon]=[]; rayons[it.rayon].push(it); });
+
+  el.innerHTML = `<h2 class="section-title">🛒 Liste de Courses</h2>` +
+    RAYON_ORDER.filter(r=>rayons[r]).map(rayon => `
+      <div class="rayon">
+        <div class="rayon-header">
+          <div class="rayon-dot" style="background:${RAYON_COLORS[rayon]}"></div>
+          <span class="rayon-name">${RAYON_ICONS[rayon]} ${rayon}</span>
+        </div>
+        ${rayons[rayon].map(item => {
+          const q = Number.isInteger(Number(item.qty))?Number(item.qty):Math.round(Number(item.qty)*10)/10;
+          return `<div class="grocery-item ${item.checked?'checked':''}" onclick="toggleGrocery('${item.id}')">
+            <div class="grocery-check">${CHECK_SVG}</div>
+            <span class="grocery-name">${esc(item.name)}</span>
+            <span class="grocery-qty">${q}${item.unit?' '+item.unit:''}</span>
+          </div>`;
+        }).join('')}
+      </div>`).join('');
+
+  updateSummary();
+  el.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+async function toggleGrocery(id) {
+  const item = groceryItems.find(g => g.id === id);
+  if (!item) return;
+  await sb.from('grocery_list').update({ checked: !item.checked }).eq('id', id);
+  item.checked = !item.checked;
+  renderGroceryList();
+}
+
+function updateSummary() {
+  const total = groceryItems.length;
+  if (!total) { document.getElementById('summaryBar').classList.remove('visible'); return; }
+  const checked = groceryItems.filter(g=>g.checked).length;
+  document.getElementById('summaryBar').classList.add('visible');
+  document.getElementById('summaryText').innerHTML = `<span>${checked}/${total}</span> articles cochés — ${total-checked} restant${total-checked>1?'s':''}`;
+}
+
+// ===== FREE ITEMS TAB =====
+async function addFreeItem() {
+  const name = document.getElementById('freeNameInput').value.trim();
+  const qty = parseFloat(document.getElementById('freeQtyInput').value) || 1;
+  const unit = document.getElementById('freeUnitInput').value;
+  const rayon = document.getElementById('freeRayonInput').value;
+  if (!name) return;
+
+  await sb.from('free_items').insert({ name, qty, unit, rayon, checked: false });
+  await sb.from('inventory').upsert({ name, unit, rayon, last_used: new Date().toISOString() }, { onConflict: 'name' });
+
+  document.getElementById('freeNameInput').value = '';
+  document.getElementById('freeQtyInput').value = '1';
+  await Promise.all([loadFreeItems(), loadInventory()]);
+  renderFreeItems();
+  renderInventory();
+  toast('Article ajouté');
+}
+
+function renderFreeItems() {
+  const el = document.getElementById('freeItemsList');
+  if (!freeItems.length) { el.innerHTML = '<div class="empty-msg">Aucun article libre pour le moment.</div>'; return; }
+  const rayons = {};
+  freeItems.forEach(f => { if (!rayons[f.rayon]) rayons[f.rayon]=[]; rayons[f.rayon].push(f); });
+
+  el.innerHTML = RAYON_ORDER.filter(r=>rayons[r]).map(rayon => `
+    <div class="rayon">
+      <div class="rayon-header">
+        <div class="rayon-dot" style="background:${RAYON_COLORS[rayon]}"></div>
+        <span class="rayon-name">${RAYON_ICONS[rayon]} ${rayon}</span>
+      </div>
+      ${rayons[rayon].map(f => `
+        <div class="grocery-item">
+          <span class="grocery-name">${esc(f.name)}</span>
+          <span class="grocery-qty">${f.qty}${f.unit?' '+f.unit:''}</span>
+          <button class="grocery-remove" onclick="event.stopPropagation();removeFreeItem('${f.id}')">×</button>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+async function removeFreeItem(id) {
+  await sb.from('free_items').delete().eq('id', id);
+  await loadFreeItems();
+  renderFreeItems();
+}
+
+// ===== INVENTORY TAB =====
+function renderInventory() {
+  const el = document.getElementById('inventoryList');
+  const search = (document.getElementById('invSearch')?.value || '').toLowerCase();
+  const filtered = inventory.filter(i => i.name.toLowerCase().includes(search));
+
+  if (!filtered.length) {
+    el.innerHTML = search ? '<div class="empty-msg">Aucun résultat.</div>' : '<div class="empty-msg">L\'inventaire est vide.</div>';
+    return;
+  }
+
+  const rayons = {};
+  filtered.forEach(i => { if (!rayons[i.rayon]) rayons[i.rayon]=[]; rayons[i.rayon].push(i); });
+
+  el.innerHTML = RAYON_ORDER.filter(r=>rayons[r]).map(rayon => `
+    <div class="rayon">
+      <div class="rayon-header">
+        <div class="rayon-dot" style="background:${RAYON_COLORS[rayon]}"></div>
+        <span class="rayon-name">${RAYON_ICONS[rayon]} ${rayon}</span>
+      </div>
+      ${rayons[rayon].map(item => `
+        <div class="inv-item">
+          <span class="inv-name">${esc(item.name)}</span>
+          <span class="inv-detail">${item.unit||''} · ${item.rayon}</span>
+          <button class="inv-add" id="inv-add-${item.id}" onclick="addFromInventory('${item.id}')" title="Ajouter aux courses">+</button>
+          <button class="inv-remove" onclick="removeFromInventory('${item.id}')" title="Supprimer">×</button>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+async function addFromInventory(id) {
+  const item = inventory.find(i => i.id === id);
+  if (!item) return;
+  await sb.from('free_items').insert({ name: item.name, qty: 1, unit: item.unit, rayon: item.rayon, checked: false });
+  await loadFreeItems();
+  renderFreeItems();
+
+  const btn = document.getElementById('inv-add-' + id);
+  if (btn) { btn.classList.add('added'); btn.textContent = '✓'; }
+  toast(item.name + ' ajouté aux courses');
+}
+
+async function removeFromInventory(id) {
+  const item = inventory.find(i => i.id === id);
+  if (!item || !confirm('Supprimer « ' + item.name + ' » de l\'inventaire ?')) return;
+  await sb.from('inventory').delete().eq('id', id);
+  await loadInventory();
+  renderInventory();
+}
+
+// ===== MANAGE TAB =====
+function initEmojiPicker() {
+  document.getElementById('emojiPicker').innerHTML = EMOJIS.map(e =>
+    `<button class="emoji-option ${e===selectedEmoji?'selected':''}" onclick="pickEmoji('${e}',this)" type="button">${e}</button>`
+  ).join('');
+}
+
+function pickEmoji(e, btn) {
+  selectedEmoji = e;
+  document.querySelectorAll('.emoji-option').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function addTempIngredient() {
+  const name = document.getElementById('ingNameInput').value.trim();
+  const qty = parseFloat(document.getElementById('ingQtyInput').value);
+  const unit = document.getElementById('ingUnitInput').value;
+  const rayon = document.getElementById('ingRayonInput').value;
+  if (!name || isNaN(qty) || qty <= 0) return;
+
+  tempIngredients.push({ name, qty, unit, rayon });
+  renderTempIngs();
+  document.getElementById('ingNameInput').value = '';
+  document.getElementById('ingQtyInput').value = '';
+  document.getElementById('ingNameInput').focus();
+  updateSaveBtn();
+}
+
+function removeTempIng(i) {
+  tempIngredients.splice(i, 1);
+  renderTempIngs(); updateSaveBtn();
+}
+
+function renderTempIngs() {
+  const el = document.getElementById('ingList');
+  if (!tempIngredients.length) { el.innerHTML=''; return; }
+  el.innerHTML = tempIngredients.map((g,i) => `
+    <div class="ing-row">
+      <span class="ing-name">${esc(g.name)}</span>
+      <span class="ing-detail">${g.qty} ${g.unit}</span>
+      <span class="ing-detail">— ${g.rayon}</span>
+      <button class="ing-remove" onclick="removeTempIng(${i})" type="button">×</button>
+    </div>`).join('');
+}
+
+function updateSaveBtn() {
+  const name = document.getElementById('mealNameInput').value.trim();
+  document.getElementById('saveMealBtn').disabled = !name || !tempIngredients.length;
+}
+
+async function saveMeal() {
+  const name = document.getElementById('mealNameInput').value.trim();
+  if (!name || !tempIngredients.length) return;
+
+  const { data: meal } = await sb.from('meals').insert({ name, emoji: selectedEmoji }).select().single();
+  if (!meal) return;
+
+  const rows = tempIngredients.map(g => ({
+    meal_id: meal.id, name: g.name, qty: g.qty, unit: g.unit, rayon: g.rayon, per_servings: 2
+  }));
+  await sb.from('meal_ingredients').insert(rows);
+
+  // Add to inventory
+  for (const g of tempIngredients) {
+    await sb.from('inventory').upsert({ name: g.name, unit: g.unit, rayon: g.rayon, last_used: new Date().toISOString() }, { onConflict: 'name' });
+  }
+
+  // Reset form
+  document.getElementById('mealNameInput').value = '';
+  tempIngredients = [];
+  renderTempIngs(); updateSaveBtn();
+  selectedEmoji = EMOJIS[0]; initEmojiPicker();
+  await Promise.all([loadMeals(), loadInventory()]);
+  renderMeals(); renderManagedMeals(); renderInventory();
+  toast('Repas enregistré !');
+}
+
+async function deleteMeal(id) {
+  const meal = meals.find(m => m.id === id);
+  if (!meal || !confirm('Supprimer « ' + meal.name + ' » ?')) return;
+  await sb.from('meals').delete().eq('id', id);
+  selectedMealIds.delete(id);
+  await loadMeals();
+  renderMeals(); renderManagedMeals();
+}
+
+function renderManagedMeals() {
+  const el = document.getElementById('managedMealsList');
+  if (!meals.length) { el.innerHTML='<div class="empty-msg">Aucun repas enregistré.</div>'; return; }
+  el.innerHTML = meals.map(m => `
+    <div class="managed-meal">
+      <span class="mm-emoji">${m.emoji}</span>
+      <span class="mm-name">${esc(m.name)}</span>
+      <span class="mm-count">${(m.meal_ingredients||[]).length} ingrédient${(m.meal_ingredients||[]).length>1?'s':''}</span>
+      <button class="mm-delete" onclick="deleteMeal('${m.id}')" title="Supprimer">×</button>
+    </div>`).join('');
+}
+
+// ===== AUTOCOMPLETE =====
+function setupAutocomplete(inputId, listId, onSelect) {
+  const input = document.getElementById(inputId);
+  const list = document.getElementById(listId);
+
+  input.addEventListener('input', () => {
+    const val = input.value.trim().toLowerCase();
+    if (val.length < 1) { list.style.display = 'none'; return; }
+    const matches = inventory.filter(i => i.name.toLowerCase().includes(val)).slice(0, 8);
+    if (!matches.length) { list.style.display = 'none'; return; }
+    list.innerHTML = matches.map(m => `
+      <div class="autocomplete-item" data-id="${m.id}">
+        <span class="ac-name">${esc(m.name)}</span>
+        <span class="ac-detail">${m.unit||''} · ${m.rayon}</span>
+      </div>`).join('');
+    list.style.display = 'block';
+    list.querySelectorAll('.autocomplete-item').forEach(el => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const item = inventory.find(i => i.id === el.dataset.id);
+        if (item) onSelect(item);
+      });
+    });
+  });
+
+  input.addEventListener('blur', () => { setTimeout(() => list.style.display = 'none', 150); });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); list.style.display = 'none'; }
+  });
+}
+
+// ===== UTILITIES =====
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2200);
+}
+
+// Key listeners
+document.getElementById('mealNameInput').addEventListener('input', updateSaveBtn);
+['ingNameInput','ingQtyInput'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addTempIngredient(); }
+  });
+});
+['freeNameInput','freeQtyInput'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addFreeItem(); }
+  });
+});
+
+// ===== START =====
+init();
+</script>
+</body>
+</html>
