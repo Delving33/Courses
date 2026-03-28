@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Notre Liste de Courses</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.39.3/supabase.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --bg: #FAF7F2;
@@ -35,7 +35,6 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; line-height:1.5; }
 
-  /* Header */
   .header { text-align:center; padding:40px 24px 28px; position:relative; }
   .header::after { content:''; position:absolute; bottom:0; left:50%; transform:translateX(-50%); width:60px; height:3px; background:var(--accent); border-radius:2px; }
   .header h1 { font-family:'DM Serif Display',serif; font-size:2.2rem; color:var(--text); margin-bottom:6px; letter-spacing:-0.5px; }
@@ -44,10 +43,8 @@
   .sync-dot.connected { background:var(--green); }
 
   .container { max-width:900px; margin:0 auto; padding:28px 20px 100px; }
-
   .section-title { font-family:'DM Serif Display',serif; font-size:1.4rem; margin-bottom:18px; display:flex; align-items:center; gap:10px; }
 
-  /* Tabs */
   .tabs { display:flex; gap:3px; background:var(--card); border:2px solid var(--border); border-radius:12px; padding:3px; margin-bottom:28px; overflow-x:auto; }
   .tab { flex:1; padding:11px 8px; border:none; background:transparent; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:600; color:var(--text-soft); cursor:pointer; border-radius:9px; transition:all 0.25s; white-space:nowrap; min-width:0; }
   .tab:hover { color:var(--text); }
@@ -57,7 +54,6 @@
 
   @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 
-  /* Cards */
   .meals-grid { display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:36px; }
   .meal-card { background:var(--card); border:2px solid var(--border); border-radius:var(--radius); padding:18px 22px; cursor:pointer; transition:all 0.25s; position:relative; overflow:hidden; user-select:none; }
   .meal-card::before { content:''; position:absolute; left:0;top:0;bottom:0; width:4px; background:var(--border); transition:background 0.25s; }
@@ -75,7 +71,6 @@
   .ingredient-tag { background:var(--bg); color:var(--text-soft); font-size:0.8rem; padding:3px 9px; border-radius:18px; font-weight:500; transition:all 0.2s; }
   .meal-card.selected .ingredient-tag { background:var(--accent-light); color:var(--accent-dark); }
 
-  /* Servings */
   .servings-row { display:flex; align-items:center; gap:14px; margin-bottom:28px; background:var(--card); padding:14px 22px; border-radius:var(--radius); border:2px solid var(--border); }
   .servings-label { font-weight:600; font-size:0.92rem; color:var(--text-soft); }
   .servings-control { display:flex; align-items:center; margin-left:auto; }
@@ -85,7 +80,6 @@
   .servings-btn:hover { background:var(--accent-light); border-color:var(--accent); color:var(--accent-dark); }
   .servings-value { width:46px;height:36px; display:flex;align-items:center;justify-content:center; font-weight:700;font-size:1.1rem; border-top:2px solid var(--border); border-bottom:2px solid var(--border); background:white; }
 
-  /* Buttons */
   .btn-primary { width:100%; padding:16px; background:var(--accent); color:white; border:none; border-radius:var(--radius); font-family:'DM Sans',sans-serif; font-size:1.05rem; font-weight:700; cursor:pointer; transition:all 0.25s; letter-spacing:0.3px; }
   .btn-primary:hover { background:var(--accent-dark); transform:translateY(-2px); box-shadow:0 8px 24px rgba(212,118,60,0.3); }
   .btn-primary:disabled { background:var(--border); cursor:not-allowed; transform:none; box-shadow:none; }
@@ -93,7 +87,6 @@
   .btn-green:hover { background:var(--green-dark); box-shadow:0 8px 24px rgba(90,143,92,0.3); }
   .btn-small { width:auto; padding:10px 18px; font-size:0.9rem; }
 
-  /* Grocery List */
   .grocery-section { margin-bottom:32px; }
   .rayon { margin-bottom:18px; }
   .rayon-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; padding-bottom:5px; border-bottom:2px solid var(--border); }
@@ -113,7 +106,6 @@
   .grocery-remove { width:26px;height:26px; border-radius:6px; border:none; background:var(--red-light); color:var(--red); font-size:1rem; cursor:pointer; display:flex;align-items:center;justify-content:center; transition:all 0.15s; flex-shrink:0; }
   .grocery-remove:hover { background:var(--red); color:white; }
 
-  /* Form elements */
   .form-card { background:var(--card); border:2px solid var(--border); border-radius:var(--radius); padding:24px; margin-bottom:18px; }
   .form-row { display:flex; gap:10px; margin-bottom:14px; align-items:flex-end; }
   .form-group { display:flex; flex-direction:column; gap:5px; flex:1; position:relative; }
@@ -124,20 +116,17 @@
   .form-input:focus,.form-select:focus { outline:none; border-color:var(--accent); background:white; }
   .form-select { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237A6F63' d='M2 4l4 4 4-4'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
 
-  /* Autocomplete */
   .autocomplete-list { position:absolute; top:100%; left:0; right:0; background:white; border:2px solid var(--accent); border-top:none; border-radius:0 0 9px 9px; max-height:180px; overflow-y:auto; z-index:100; box-shadow:var(--shadow-hover); }
   .autocomplete-item { padding:9px 14px; cursor:pointer; font-size:0.9rem; display:flex; align-items:center; gap:8px; transition:background 0.1s; }
   .autocomplete-item:hover { background:var(--accent-light); }
   .autocomplete-item .ac-name { font-weight:600; flex:1; }
   .autocomplete-item .ac-detail { font-size:0.8rem; color:var(--text-soft); }
 
-  /* Emoji picker */
   .emoji-picker { display:flex; gap:5px; flex-wrap:wrap; }
   .emoji-option { width:38px;height:38px; border-radius:9px; border:2px solid var(--border); background:var(--bg); font-size:1.15rem; cursor:pointer; display:flex;align-items:center;justify-content:center; transition:all 0.15s; }
   .emoji-option:hover { border-color:var(--accent); transform:scale(1.1); }
   .emoji-option.selected { border-color:var(--accent); background:var(--accent-light); }
 
-  /* Ingredient rows */
   .ing-list { margin-top:14px; }
   .ing-row { display:flex; gap:7px; align-items:center; margin-bottom:7px; padding:9px 12px; background:var(--bg); border-radius:9px; animation:fadeUp 0.2s; }
   .ing-row .ing-name { flex:1; font-weight:500; font-size:0.9rem; }
@@ -147,7 +136,6 @@
   .btn-add-ing { padding:10px 18px; border:none; border-radius:9px; font-family:'DM Sans',sans-serif; font-size:0.9rem; font-weight:700; cursor:pointer; transition:all 0.2s; background:var(--green-light); color:var(--green-dark); width:100%; margin-top:7px; }
   .btn-add-ing:hover { background:var(--green); color:white; }
 
-  /* Managed meal rows */
   .managed-meal { display:flex; align-items:center; gap:12px; padding:14px 18px; background:var(--card); border:2px solid var(--border); border-radius:11px; margin-bottom:9px; transition:all 0.2s; }
   .managed-meal:hover { border-color:var(--accent-light); }
   .managed-meal .mm-emoji { font-size:1.3rem; }
@@ -156,7 +144,6 @@
   .mm-delete { width:32px;height:32px; border-radius:8px; border:2px solid var(--red-light); background:white; color:var(--red); font-size:1rem; cursor:pointer; display:flex;align-items:center;justify-content:center; transition:all 0.15s; }
   .mm-delete:hover { background:var(--red); color:white; border-color:var(--red); }
 
-  /* Inventory */
   .inv-item { display:flex; align-items:center; gap:11px; padding:11px 14px; background:var(--card); border-radius:10px; margin-bottom:5px; border:1.5px solid transparent; transition:all 0.2s; }
   .inv-item:hover { border-color:var(--border); }
   .inv-name { font-weight:500; font-size:0.93rem; flex:1; }
@@ -204,7 +191,6 @@
     <button class="tab" data-tab="manage">✏️ Gérer repas</button>
   </div>
 
-  <!-- TAB: PLANIFIER -->
   <div class="tab-content active" id="tab-plan">
     <h2 class="section-title">🍽️ Mes Repas</h2>
     <div class="meals-grid" id="mealsGrid"><div class="loading">Chargement</div></div>
@@ -220,7 +206,6 @@
     <div class="grocery-section" id="groceryList" style="margin-top:28px;"></div>
   </div>
 
-  <!-- TAB: COURSES LIBRES -->
   <div class="tab-content" id="tab-free">
     <h2 class="section-title">🛒 Courses libres</h2>
     <p style="color:var(--text-soft);margin-bottom:18px;font-size:0.93rem;">Ajoutez ici tout ce qui n'est pas lié à un repas (ménage, hygiène, etc.). Ces articles seront fusionnés dans la liste de courses finale.</p>
@@ -262,17 +247,15 @@
     <div id="freeItemsList"></div>
   </div>
 
-  <!-- TAB: INVENTAIRE -->
   <div class="tab-content" id="tab-inventory">
     <h2 class="section-title">📦 Inventaire</h2>
-    <p style="color:var(--text-soft);margin-bottom:18px;font-size:0.93rem;">Tout ce que vous avez déjà acheté. Parcourez la liste et cliquez <strong>+</strong> pour ajouter ce qui manque à la liste de courses.</p>
+    <p style="color:var(--text-soft);margin-bottom:18px;font-size:0.93rem;">Tout ce que vous avez déjà acheté. Cliquez <strong>+</strong> pour ajouter ce qui manque à la liste de courses.</p>
     <div class="search-bar">
       <input type="text" id="invSearch" placeholder="🔍 Rechercher dans l'inventaire..." oninput="renderInventory()">
     </div>
     <div id="inventoryList"><div class="loading">Chargement</div></div>
   </div>
 
-  <!-- TAB: GÉRER REPAS -->
   <div class="tab-content" id="tab-manage">
     <h2 class="section-title">➕ Ajouter un repas</h2>
     <div class="form-card">
@@ -340,12 +323,11 @@ const RAYON_COLORS = {"Fruits & Légumes":"var(--rayon-legumes)","Viandes & Pois
 const RAYON_ICONS = {"Fruits & Légumes":"🥬","Viandes & Poissons":"🥩","Épicerie":"🏪","Frais":"🧊","Autre":"🛒"};
 const RAYON_ORDER = ["Fruits & Légumes","Viandes & Poissons","Frais","Épicerie","Autre"];
 
-// ===== SUPABASE =====
 const SUPABASE_URL = 'https://ysqqpqqxwivmeuxshxkt.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlzcXFwcXF4d2l2bWV1eHNoeGt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTcxNTgsImV4cCI6MjA5MDI5MzE1OH0.MjxLa718ZnelCPYhA8779XJ8_QaITuzsTsBIY5ODq7E';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ===== STATE =====
 let meals = [];
 let inventory = [];
 let freeItems = [];
@@ -355,9 +337,13 @@ let servings = 2;
 let tempIngredients = [];
 let selectedEmoji = EMOJIS[0];
 
-// ===== INIT =====
 async function init() {
-  await Promise.all([loadMeals(), loadInventory(), loadFreeItems(), loadGroceryList()]);
+  try {
+    await Promise.all([loadMeals(), loadInventory(), loadFreeItems(), loadGroceryList()]);
+    document.getElementById('syncDot').classList.add('connected');
+  } catch(e) {
+    console.error('Erreur de chargement:', e);
+  }
   setupRealtimeSubscriptions();
   renderMeals();
   renderInventory();
@@ -378,28 +364,29 @@ async function init() {
     document.getElementById('freeAutocomplete').style.display = 'none';
     document.getElementById('freeQtyInput').focus();
   });
-  document.getElementById('syncDot').classList.add('connected');
 }
 
-// ===== DATA LOADING =====
 async function loadMeals() {
-  const { data: m } = await sb.from('meals').select('*, meal_ingredients(*)').order('created_at');
-  if (m) meals = m;
+  const { data, error } = await sb.from('meals').select('*, meal_ingredients(*)').order('created_at');
+  if (error) throw error;
+  if (data) meals = data;
 }
 async function loadInventory() {
-  const { data } = await sb.from('inventory').select('*').order('name');
+  const { data, error } = await sb.from('inventory').select('*').order('name');
+  if (error) throw error;
   if (data) inventory = data;
 }
 async function loadFreeItems() {
-  const { data } = await sb.from('free_items').select('*').order('created_at');
+  const { data, error } = await sb.from('free_items').select('*').order('created_at');
+  if (error) throw error;
   if (data) freeItems = data;
 }
 async function loadGroceryList() {
-  const { data } = await sb.from('grocery_list').select('*').order('created_at');
+  const { data, error } = await sb.from('grocery_list').select('*').order('created_at');
+  if (error) throw error;
   if (data) groceryItems = data;
 }
 
-// ===== REALTIME =====
 function setupRealtimeSubscriptions() {
   sb.channel('all-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'meals' }, () => { loadMeals().then(() => { renderMeals(); renderManagedMeals(); }); })
@@ -412,7 +399,7 @@ function setupRealtimeSubscriptions() {
     });
 }
 
-// ===== TABS =====
+// TABS
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -420,10 +407,11 @@ document.querySelectorAll('.tab').forEach(tab => {
     tab.classList.add('active');
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
     if (tab.dataset.tab !== 'plan') document.getElementById('summaryBar').classList.remove('visible');
+    else if (groceryItems.length) updateSummary();
   });
 });
 
-// ===== PLAN TAB =====
+// PLAN
 function renderMeals() {
   const grid = document.getElementById('mealsGrid');
   if (!meals.length) { grid.innerHTML = '<div class="empty-msg">Aucun repas. Allez dans <strong>Gérer repas</strong> pour en ajouter.</div>'; return; }
@@ -459,45 +447,32 @@ function changeServings(d) {
 }
 
 async function generateList() {
-  // Clear existing grocery list
   await sb.from('grocery_list').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-
   const merged = {};
-
-  // Add meal ingredients
   selectedMealIds.forEach(id => {
     const meal = meals.find(m => m.id === id);
     if (!meal) return;
     (meal.meal_ingredients || []).forEach(ing => {
       const key = ing.name + '|' + ing.unit + '|' + ing.rayon;
       if (!merged[key]) merged[key] = { name:ing.name, unit:ing.unit, rayon:ing.rayon, qty:0, source:'repas' };
-      merged[key].qty += (ing.qty / ing.per_servings) * servings;
+      merged[key].qty += (Number(ing.qty) / Number(ing.per_servings)) * servings;
     });
   });
-
-  // Add free items (not checked)
   freeItems.filter(f => !f.checked).forEach(f => {
     const key = f.name + '|' + f.unit + '|' + f.rayon;
     if (!merged[key]) merged[key] = { name:f.name, unit:f.unit, rayon:f.rayon, qty:0, source:'libre' };
     merged[key].qty += Number(f.qty);
   });
-
   const rows = Object.values(merged).map(item => ({
-    name: item.name,
-    qty: Math.round(item.qty * 100) / 100,
-    unit: item.unit,
-    rayon: item.rayon,
-    source: item.source,
-    checked: false
+    name: item.name, qty: Math.round(item.qty * 100) / 100,
+    unit: item.unit, rayon: item.rayon, source: item.source, checked: false
   }));
-
-  if (rows.length) await sb.from('grocery_list').insert(rows);
-
-  // Add to inventory
-  for (const item of rows) {
-    await sb.from('inventory').upsert({ name: item.name, unit: item.unit, rayon: item.rayon, last_used: new Date().toISOString() }, { onConflict: 'name' });
+  if (rows.length) {
+    await sb.from('grocery_list').insert(rows);
+    for (const item of rows) {
+      await sb.from('inventory').upsert({ name: item.name, unit: item.unit, rayon: item.rayon, last_used: new Date().toISOString() }, { onConflict: 'name' });
+    }
   }
-
   await Promise.all([loadGroceryList(), loadInventory()]);
   renderGroceryList();
   renderInventory();
@@ -507,10 +482,8 @@ async function generateList() {
 function renderGroceryList() {
   const el = document.getElementById('groceryList');
   if (!groceryItems.length) { el.innerHTML = ''; document.getElementById('summaryBar').classList.remove('visible'); return; }
-
   const rayons = {};
   groceryItems.forEach(it => { if (!rayons[it.rayon]) rayons[it.rayon]=[]; rayons[it.rayon].push(it); });
-
   el.innerHTML = `<h2 class="section-title">🛒 Liste de Courses</h2>` +
     RAYON_ORDER.filter(r=>rayons[r]).map(rayon => `
       <div class="rayon">
@@ -527,7 +500,6 @@ function renderGroceryList() {
           </div>`;
         }).join('')}
       </div>`).join('');
-
   updateSummary();
   el.scrollIntoView({ behavior:'smooth', block:'start' });
 }
@@ -548,22 +520,19 @@ function updateSummary() {
   document.getElementById('summaryText').innerHTML = `<span>${checked}/${total}</span> articles cochés — ${total-checked} restant${total-checked>1?'s':''}`;
 }
 
-// ===== FREE ITEMS TAB =====
+// FREE ITEMS
 async function addFreeItem() {
   const name = document.getElementById('freeNameInput').value.trim();
   const qty = parseFloat(document.getElementById('freeQtyInput').value) || 1;
   const unit = document.getElementById('freeUnitInput').value;
   const rayon = document.getElementById('freeRayonInput').value;
   if (!name) return;
-
   await sb.from('free_items').insert({ name, qty, unit, rayon, checked: false });
   await sb.from('inventory').upsert({ name, unit, rayon, last_used: new Date().toISOString() }, { onConflict: 'name' });
-
   document.getElementById('freeNameInput').value = '';
   document.getElementById('freeQtyInput').value = '1';
   await Promise.all([loadFreeItems(), loadInventory()]);
-  renderFreeItems();
-  renderInventory();
+  renderFreeItems(); renderInventory();
   toast('Article ajouté');
 }
 
@@ -572,7 +541,6 @@ function renderFreeItems() {
   if (!freeItems.length) { el.innerHTML = '<div class="empty-msg">Aucun article libre pour le moment.</div>'; return; }
   const rayons = {};
   freeItems.forEach(f => { if (!rayons[f.rayon]) rayons[f.rayon]=[]; rayons[f.rayon].push(f); });
-
   el.innerHTML = RAYON_ORDER.filter(r=>rayons[r]).map(rayon => `
     <div class="rayon">
       <div class="rayon-header">
@@ -590,24 +558,20 @@ function renderFreeItems() {
 
 async function removeFreeItem(id) {
   await sb.from('free_items').delete().eq('id', id);
-  await loadFreeItems();
-  renderFreeItems();
+  await loadFreeItems(); renderFreeItems();
 }
 
-// ===== INVENTORY TAB =====
+// INVENTORY
 function renderInventory() {
   const el = document.getElementById('inventoryList');
   const search = (document.getElementById('invSearch')?.value || '').toLowerCase();
   const filtered = inventory.filter(i => i.name.toLowerCase().includes(search));
-
   if (!filtered.length) {
     el.innerHTML = search ? '<div class="empty-msg">Aucun résultat.</div>' : '<div class="empty-msg">L\'inventaire est vide.</div>';
     return;
   }
-
   const rayons = {};
   filtered.forEach(i => { if (!rayons[i.rayon]) rayons[i.rayon]=[]; rayons[i.rayon].push(i); });
-
   el.innerHTML = RAYON_ORDER.filter(r=>rayons[r]).map(rayon => `
     <div class="rayon">
       <div class="rayon-header">
@@ -628,9 +592,7 @@ async function addFromInventory(id) {
   const item = inventory.find(i => i.id === id);
   if (!item) return;
   await sb.from('free_items').insert({ name: item.name, qty: 1, unit: item.unit, rayon: item.rayon, checked: false });
-  await loadFreeItems();
-  renderFreeItems();
-
+  await loadFreeItems(); renderFreeItems();
   const btn = document.getElementById('inv-add-' + id);
   if (btn) { btn.classList.add('added'); btn.textContent = '✓'; }
   toast(item.name + ' ajouté aux courses');
@@ -640,30 +602,26 @@ async function removeFromInventory(id) {
   const item = inventory.find(i => i.id === id);
   if (!item || !confirm('Supprimer « ' + item.name + ' » de l\'inventaire ?')) return;
   await sb.from('inventory').delete().eq('id', id);
-  await loadInventory();
-  renderInventory();
+  await loadInventory(); renderInventory();
 }
 
-// ===== MANAGE TAB =====
+// MANAGE
 function initEmojiPicker() {
   document.getElementById('emojiPicker').innerHTML = EMOJIS.map(e =>
     `<button class="emoji-option ${e===selectedEmoji?'selected':''}" onclick="pickEmoji('${e}',this)" type="button">${e}</button>`
   ).join('');
 }
-
 function pickEmoji(e, btn) {
   selectedEmoji = e;
   document.querySelectorAll('.emoji-option').forEach(b=>b.classList.remove('selected'));
   btn.classList.add('selected');
 }
-
 function addTempIngredient() {
   const name = document.getElementById('ingNameInput').value.trim();
   const qty = parseFloat(document.getElementById('ingQtyInput').value);
   const unit = document.getElementById('ingUnitInput').value;
   const rayon = document.getElementById('ingRayonInput').value;
   if (!name || isNaN(qty) || qty <= 0) return;
-
   tempIngredients.push({ name, qty, unit, rayon });
   renderTempIngs();
   document.getElementById('ingNameInput').value = '';
@@ -671,12 +629,7 @@ function addTempIngredient() {
   document.getElementById('ingNameInput').focus();
   updateSaveBtn();
 }
-
-function removeTempIng(i) {
-  tempIngredients.splice(i, 1);
-  renderTempIngs(); updateSaveBtn();
-}
-
+function removeTempIng(i) { tempIngredients.splice(i, 1); renderTempIngs(); updateSaveBtn(); }
 function renderTempIngs() {
   const el = document.getElementById('ingList');
   if (!tempIngredients.length) { el.innerHTML=''; return; }
@@ -688,48 +641,34 @@ function renderTempIngs() {
       <button class="ing-remove" onclick="removeTempIng(${i})" type="button">×</button>
     </div>`).join('');
 }
-
 function updateSaveBtn() {
   const name = document.getElementById('mealNameInput').value.trim();
   document.getElementById('saveMealBtn').disabled = !name || !tempIngredients.length;
 }
-
 async function saveMeal() {
   const name = document.getElementById('mealNameInput').value.trim();
   if (!name || !tempIngredients.length) return;
-
-  const { data: meal } = await sb.from('meals').insert({ name, emoji: selectedEmoji }).select().single();
-  if (!meal) return;
-
-  const rows = tempIngredients.map(g => ({
-    meal_id: meal.id, name: g.name, qty: g.qty, unit: g.unit, rayon: g.rayon, per_servings: 2
-  }));
+  const { data: meal, error } = await sb.from('meals').insert({ name, emoji: selectedEmoji }).select().single();
+  if (error || !meal) { console.error(error); return; }
+  const rows = tempIngredients.map(g => ({ meal_id: meal.id, name: g.name, qty: g.qty, unit: g.unit, rayon: g.rayon, per_servings: 2 }));
   await sb.from('meal_ingredients').insert(rows);
-
-  // Add to inventory
   for (const g of tempIngredients) {
     await sb.from('inventory').upsert({ name: g.name, unit: g.unit, rayon: g.rayon, last_used: new Date().toISOString() }, { onConflict: 'name' });
   }
-
-  // Reset form
   document.getElementById('mealNameInput').value = '';
-  tempIngredients = [];
-  renderTempIngs(); updateSaveBtn();
+  tempIngredients = []; renderTempIngs(); updateSaveBtn();
   selectedEmoji = EMOJIS[0]; initEmojiPicker();
   await Promise.all([loadMeals(), loadInventory()]);
   renderMeals(); renderManagedMeals(); renderInventory();
   toast('Repas enregistré !');
 }
-
 async function deleteMeal(id) {
   const meal = meals.find(m => m.id === id);
   if (!meal || !confirm('Supprimer « ' + meal.name + ' » ?')) return;
   await sb.from('meals').delete().eq('id', id);
   selectedMealIds.delete(id);
-  await loadMeals();
-  renderMeals(); renderManagedMeals();
+  await loadMeals(); renderMeals(); renderManagedMeals();
 }
-
 function renderManagedMeals() {
   const el = document.getElementById('managedMealsList');
   if (!meals.length) { el.innerHTML='<div class="empty-msg">Aucun repas enregistré.</div>'; return; }
@@ -742,11 +681,10 @@ function renderManagedMeals() {
     </div>`).join('');
 }
 
-// ===== AUTOCOMPLETE =====
+// AUTOCOMPLETE
 function setupAutocomplete(inputId, listId, onSelect) {
   const input = document.getElementById(inputId);
   const list = document.getElementById(listId);
-
   input.addEventListener('input', () => {
     const val = input.value.trim().toLowerCase();
     if (val.length < 1) { list.style.display = 'none'; return; }
@@ -766,38 +704,25 @@ function setupAutocomplete(inputId, listId, onSelect) {
       });
     });
   });
-
   input.addEventListener('blur', () => { setTimeout(() => list.style.display = 'none', 150); });
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); list.style.display = 'none'; }
-  });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); list.style.display = 'none'; } });
 }
 
-// ===== UTILITIES =====
+// UTILS
 function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
-
 function toast(msg) {
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2200);
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
 }
 
-// Key listeners
 document.getElementById('mealNameInput').addEventListener('input', updateSaveBtn);
 ['ingNameInput','ingQtyInput'].forEach(id => {
-  document.getElementById(id).addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); addTempIngredient(); }
-  });
+  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addTempIngredient(); } });
 });
 ['freeNameInput','freeQtyInput'].forEach(id => {
-  document.getElementById(id).addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); addFreeItem(); }
-  });
+  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addFreeItem(); } });
 });
 
-// ===== START =====
 init();
 </script>
 </body>
